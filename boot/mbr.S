@@ -6,11 +6,13 @@ entry:
 
     call clear_screen
 
-    call get_cursor
+    call print_by_graph
 
-    mov ax, message
-    mov cx, message_size
-    call print
+    ; call get_cursor
+
+    ; mov ax, message
+    ; mov cx, message_size
+    ; call print
 
     jmp $
 
@@ -21,6 +23,8 @@ init_registers:
     mov ss, ax
     mov fs, ax
     mov sp, 0x7c00
+    mov ax, 0xb800
+    mov gs, ax
     ret
 
 ; clear screen by BIOS interupt
@@ -47,6 +51,23 @@ print:
     mov ax, 0x1301
     mov bx, 0x2
     int 0x10
+    ret
+
+print_by_graph:
+    mov byte [gs:0x00], '1'
+    mov byte [gs:0x01], 0xA4
+
+    mov byte [gs:0x02], ' '
+    mov byte [gs:0x03], 0xA4
+
+    mov byte [gs:0x04], 'M'
+    mov byte [gs:0x05], 0xA4
+
+    mov byte [gs:0x06], 'B'
+    mov byte [gs:0x07], 0xA4
+
+    mov byte [gs:0x08], 'R'
+    mov byte [gs:0x09], 0xA4
     ret
 
 message:
