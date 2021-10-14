@@ -18,7 +18,7 @@ macos和centos本身有差异，相关软件也已迭代多次，存在不兼容
 利用 BIOS 中断打印字符
 
 ```shell
-git checkout v_mbr
+git checkout v_mbr && make
 ```
 
 ## 第二版MBR
@@ -26,5 +26,5 @@ git checkout v_mbr
 操作显存打印字符
 
 ```shell
-git checkout v_mbr_print_by_graph
+git checkout v_mbr_print_by_graph && make
 ```
