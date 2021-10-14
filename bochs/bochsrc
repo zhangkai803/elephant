@@ -1,15 +1,22 @@
+# bochs 运行时能使用的内存
 megs: 32
 
+# 对应真实机器的 BIOS 和 VGA BIOS
 romimage: file=/usr/local/share/bochs/BIOS-bochs-latest
 vgaromimage: file=/usr/local/share/bochs/VGABIOS-lgpl-latest
 
+# 启动盘
+# boot: floppy # 默认从软盘启动
 boot: disk
 
+# bochs 运行日志
 log: bochsout.txt
 
+# 其他功能开关
 mouse: enabled=0
 #keyboard: keymap=/usr/local/share/bochs/keymaps/sdl-pc-us.map
 
+# 设置硬盘
 ata0: enabled=1, ioaddr1=0x01f0, ioaddr2=0x03f0, irq=14
 ata0-master: type=disk, path="/Users/k/self/elephant/bochs/HD60M.img", mode=flat
 # ata0-master: type=disk, path="HD60M.img", mode=flat, cylinders=6, heads=16, spt=63
