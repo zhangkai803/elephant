@@ -1,8 +1,19 @@
 ; loader
 %include "boot.inc"
 section loader vstart=LOADER_BASE_ADDR
+LOADER_STACK_TOP equ LOADER_BASE_ADDR
 
 entry:
+    jmp loader_start
+
+; gdt index 0
+GDT_BASE:
+    dd 0x00000000
+    dd 0x00000000
+
+; CODE_DESC:
+
+loader_start:
     call print_by_graph
     jmp $
 
