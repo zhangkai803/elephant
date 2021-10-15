@@ -2,10 +2,13 @@ MAKE=make
 NASM=nasm
 NASM_ARGS=-o
 
+BIN_DIR=bin
 BOOT_DIR=boot
 BOCHS_DIR=bochs
 
 all:
-	nasm -o ${BOOT_DIR}/mbr ${BOOT_DIR}/mbr.S
-	dd if=${BOOT_DIR}/mbr of=${BOCHS_DIR}/HD60M.img bs=512 count=1 conv=notrunc
+	nasm -I ${BOOT_DIR} -o ${BIN_DIR}/mbr ${BOOT_DIR}/mbr.S
+	nasm -I ${BOOT_DIR} -o ${BIN_DIR}/loader ${BOOT_DIR}/loader.S
+	dd if=${BIN_DIR}/mbr of=${BOCHS_DIR}/HD60M.img bs=512 seek=0 count=1 conv=notrunc
+	dd if=${BIN_DIR}/loader of=${BOCHS_DIR}/HD60M.img bs=512 seek=2 count=2 conv=notrunc
 	bochs -f ${BOCHS_DIR}/bochsrc

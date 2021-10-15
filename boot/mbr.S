@@ -1,4 +1,5 @@
 ; main boot record
+%include "boot.inc"
 SECTION MBR vstart=0x7c00
 
 entry:
@@ -6,15 +7,16 @@ entry:
 
     call clear_screen
 
-    call print_by_graph
+    ; call print_by_graph
+
+    call load_loader
+    jmp LOADER_BASE_ADDR
 
     ; call get_cursor
 
     ; mov ax, message
     ; mov cx, message_size
     ; call print
-
-    jmp $
 
 init_registers:
     mov ax, cs
@@ -68,6 +70,66 @@ print_by_graph:
 
     mov byte [gs:0x08], 'R'
     mov byte [gs:0x09], 0xA4
+    ret
+
+load_loader:
+    mov eax, LOADER_START_SECTOR
+    mov bx, LOADER_BASE_ADDR
+    mov cx, 1
+    call rd_disk_m_16
+    ret
+
+rd_disk_m_16:
+    mov esi, eax    ; eax: LBA 扇区号，备份到 esi
+    mov di, cx  ; cx: 读入的扇区数目，备份到 di
+
+    mov dx, 0x1f2   ; 写入读取的扇区数
+    mov al, cl
+    out dx, al
+
+    mov eax, esi    ; 从 esi 恢复 eax
+
+    mov dx, 0x1f3   ; 写入 LBA 地址7-0位
+    out dx, al
+
+    mov cl, 8   ; 写入 LBA 地址15-8位
+    shr eax, cl
+    mov dx, 0x1f4
+    out dx, al
+
+    shr eax, cl   ; 写入 LBA 地址23-16位
+    mov dx, 0x1f5
+    out dx, al
+
+    shr eax, cl
+    and al, 0x0f   ; 写入 LBA 地址27-24位
+    or al, 0xe0   ; 设置 LBA 7-4位为1110，表示硬盘为 LBA 模式
+    mov dx, 0x1f6
+    out dx, al
+
+    mov dx, 0x1f7   ; 写入命令：读取
+    mov al, 0x20
+    out dx, al
+
+  .not_ready:
+    nop
+    in al, dx
+    and al, 0x88    ; 10001000b
+    cmp al, 0x08    ; 00001000b 第4位为1表示可读，第7位为1表示忙碌
+    jnz .not_ready  ; 如果
+
+    mov ax, di  ; 要读取的扇区数
+    mov dx, 256 ; 每个扇区512Byte 每次2Byte 需要256次
+    mul dx  ; 相乘
+    mov cx, ax  ; 要读取的总次数，存入 cx
+
+    mov dx, 0x1f0
+
+  .go_on_read:
+    in ax, dx
+    mov [bx], ax
+    add bx, 2
+    loop .go_on_read
     ret
 
 message:
