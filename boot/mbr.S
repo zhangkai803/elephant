@@ -75,7 +75,7 @@ print_by_graph:
 load_loader:
     mov eax, LOADER_START_SECTOR
     mov bx, LOADER_BASE_ADDR
-    mov cx, 1
+    mov cx, LOADER_SECTOR_LENGTH
     call rd_disk_m_16
     ret
 

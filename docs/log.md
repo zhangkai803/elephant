@@ -13,7 +13,7 @@ macos和centos本身有差异，相关软件也已迭代多次，存在不兼容
 1. 按照`README.md`中的环境安装软件
 2. 修改`bochs/bochsrc:21`的硬盘地址为`${cur_dir}/bochs/HD60M.img`
 
-## 第一版MBR
+## 第一版
 
 利用 BIOS 中断打印字符
 
@@ -21,10 +21,18 @@ macos和centos本身有差异，相关软件也已迭代多次，存在不兼容
 git checkout v_mbr && make
 ```
 
-## 第二版MBR
+## 第二版
 
 操作显存打印字符
 
 ```shell
 git checkout v_mbr_print_by_graph && make
+```
+
+## 第三版
+
+加载 loader 并跳转
+
+```shell
+git checkout v_load_loader && make
 ```
