@@ -27,7 +27,7 @@ DESC_TYPE_CODE equ 1000b << 8  ; gdt 第8-11位 表示段类型 只执行代码�
 DESC_TYPE_DATA equ 0010b << 8  ; gdt 第8-11位 表示段类型 可读写数据段
 
 ; 代码段
-DESC_CODE_HIGH32 equ (0 << 31) + \
+DESC_CODE_HIGH32 equ (0 << 24) + \
                    DESC_G_4K + \
                    DESC_D_32 + \
                    DESC_L_32 + \
@@ -37,11 +37,11 @@ DESC_CODE_HIGH32 equ (0 << 31) + \
                    DESC_DPL_0 + \
                    DESC_S_CODE + \
                    DESC_TYPE_CODE + \
-                   0  ; 00000000110011111001100000000000
+                   0x0  ; 00000000110011111001100000000000
 DESC_CODE_LOW32 equ 0x0000FFFF
 
 ; 数据段
-DESC_DATA_HIGH32 equ (0 << 31) + \
+DESC_DATA_HIGH32 equ (0 << 24) + \
                    DESC_G_4K + \
                    DESC_D_32 + \
                    DESC_L_32 + \
@@ -51,7 +51,7 @@ DESC_DATA_HIGH32 equ (0 << 31) + \
                    DESC_DPL_0 + \
                    DESC_S_DATA + \
                    DESC_TYPE_DATA + \
-                   0  ; 00000000110011111001001000000000
+                   0x0  ; 00000000110011111001001000000000
 DESC_DATA_LOW32 equ 0x0000FFFF
 
 ; 显存段的段基址为 0xB8000，即 0x000B8000，共32位
@@ -63,7 +63,7 @@ DESC_DATA_LOW32 equ 0x0000FFFF
 ; 被分成2份存储
 ; 0x0 在 DESC_VIDEO_HIGH32 16-19位
 ; 0x0007 在 DESC_VIDEO_LOW32 0-15位
-DESC_VIDEO_HIGH32 equ (0 << 31) + \
+DESC_VIDEO_HIGH32 equ (0 << 24) + \
                     DESC_G_4K + \
                     DESC_D_32 + \
                     DESC_L_32 + \
@@ -73,7 +73,7 @@ DESC_VIDEO_HIGH32 equ (0 << 31) + \
                     DESC_DPL_0 + \
                     DESC_S_DATA + \
                     DESC_TYPE_DATA + \
-                    0x0B  ; 00000000110000001001001000001011
+                    0xB  ; 00000000110000001001001000001011
 DESC_VIDEO_LOW32 equ 0x80000007
 
 ; ------------- selector ----------------
@@ -83,3 +83,8 @@ RPL2 equ 10b
 RPL3 equ 11b
 TI_GDT equ 000b
 TI_LDT equ 100b
+
+; 选择子结构 第0-2位RPL 第3位TI 第4-15位描述符索引
+SELECTOR_CODE  equ (0x0001 << 3) + TI_GDT +RPL0
+SELECTOR_DATA  equ (0x0002 << 3) + TI_GDT +RPL0
+SELECTOR_VIDEO equ (0x0003 << 3) + TI_GDT +RPL0
