@@ -81,10 +81,21 @@ RPL0 equ 00b
 RPL1 equ 01b
 RPL2 equ 10b
 RPL3 equ 11b
+
 TI_GDT equ 000b
 TI_LDT equ 100b
 
 ; 选择子结构 第0-2位RPL 第3位TI 第4-15位描述符索引
-SELECTOR_CODE  equ (0x0001 << 3) + TI_GDT +RPL0
-SELECTOR_DATA  equ (0x0002 << 3) + TI_GDT +RPL0
-SELECTOR_VIDEO equ (0x0003 << 3) + TI_GDT +RPL0
+SELECTOR_CODE  equ (0x0001 << 3) + TI_GDT + RPL0
+SELECTOR_DATA  equ (0x0002 << 3) + TI_GDT + RPL0
+SELECTOR_VIDEO equ (0x0003 << 3) + TI_GDT + RPL0
+
+; ------------ page table ---------------
+PG_P    equ 1
+PG_RW_R equ 0 << 1
+PG_RW_W equ 1 << 1
+PG_US_S equ 0 << 2
+PG_US_U equ 1 << 2
+
+PAGE_SIZE          equ 0x1000  ; 页大小 4KB
+PAGE_DIR_TABLE_POS equ 0x100000  ; 页目录表物理地址
