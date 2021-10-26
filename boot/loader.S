@@ -56,11 +56,14 @@ setup_protection_mode:
 
 [bits 32]
 protection_mode_entry:
+    ; 当一个程序要执行时，就要决定程序代码、数据和堆栈各要用到内存的哪些位置
+    ; 通过设定段寄存器 CS，DS，SS 来指向这些起始位置，通常是将 DS 固定，而根据需要修改 CS
+
     ; set data segement
     mov ax, SELECTOR_DATA
-    mov ds, ax
-    mov es, ax
-    mov ss, ax
+    mov ds, ax  ; ds: data segement register
+    mov es, ax  ; es: extra segement register
+    mov ss, ax  ; ss: stack segement register
 
     ; set video segement
     mov esp, LOADER_STACK_TOP

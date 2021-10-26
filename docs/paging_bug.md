@@ -86,3 +86,35 @@ GDT[0x0020]=??? descriptor hi=0x00000000, lo=0x00000000
 
     日志最上面 3 行，可以看出异常的处理流程。首先是
     `write_virtual_checks(): write beyond limit`引发了异常，由中断
+
+- 原因
+
+    ```asm
+    [bits 32]
+    protection_mode_entry:
+        ; set data segement
+        mov ax, SELECTOR_DATA
+        mov ds, ax  ; 此处 ds 写成 dx
+        mov es, ax
+        mov ss, ax
+    ```
+
+    贴一下相关
+    [寄存器](https://baike.baidu.com/item/%E5%AF%84%E5%AD%98%E5%99%A8/187682)
+    的知识。
+
+    ds 全称 data segement register，意为数据段寄存器。在程序运行时，我们需要准备好在程序运
+    行过程中需要用到的代码（cs）、数据（ds）、栈（ss）以及其他信息（es），方式就是修改这些
+    [段寄存器](https://baike.baidu.com/item/%E6%AE%B5%E5%AF%84%E5%AD%98%E5%99%A8)
+    的值，让程序能够在正确的地方找到需要的内容。
+
+    而我们之前写错的 dx 是通用寄存器中的数据寄存器。在某些场景下有特殊用途，在这次的 BUG 场景
+    下，dx 用不到。
+
+    ...
+
+    一口老血。
+
+    喷了出来。
+
+    就没什么想说的。
