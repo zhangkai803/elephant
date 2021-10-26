@@ -32,73 +32,12 @@ gdt_ptr:
     dw GDT_LIMIT
     dd GDT_BASE
 
-total_mem_bytes dd 0
-
-ards_buf times 244 db 0
-
-ards_nr dw 0
+; total_mem_bytes dd 0
+; ards_buf times 244 db 0
+; ards_nr dw 0
 
 loader_start:
-    call get_mem
-    ; jmp $
-
-    call print_by_graph
-    ; jmp $
-
     jmp setup_protection_mode
-
-get_mem:
-    xor ebx, ebx
-    mov edx, 0x534d4150
-    mov di, ards_buf
-.e820_mem_get_loop:
-    mov eax, 0x0000e820
-    mov ecx, 20
-    int 0x15
-    jc .error_hlt
-    add di, cx
-    inc word [ards_nr]
-    cmp ebx, 0
-    jnz .e820_mem_get_loop
-
-    mov cx, [ards_nr]
-    mov ebx, ards_buf
-    xor edx, edx
-.find_mem_area:
-    mov eax, [ebx]
-    add eax, [ebx+8]
-    add ebx, 20
-    cmp edx, eax
-    jge .next_ards
-    mov edx, eax
-.next_ards:
-    loop .find_mem_area
-    jmp .mem_get_ok
-
-.mem_get_ok:
-    mov [total_mem_bytes], edx
-    ret
-
-.error_hlt:
-    hlt
-    jmp $
-
-print_by_graph:
-    mov byte [gs:0x00], '2'
-    mov byte [gs:0x01], 0xA4
-
-    mov byte [gs:0x02], ' '
-    mov byte [gs:0x03], 0xA4
-
-    mov byte [gs:0x04], 'L'
-    mov byte [gs:0x05], 0xA4
-
-    mov byte [gs:0x06], 'D'
-    mov byte [gs:0x07], 0xA4
-
-    mov byte [gs:0x08], 'R'
-    mov byte [gs:0x09], 0xA4
-    ret
 
 setup_protection_mode:
     ; A20
@@ -117,10 +56,9 @@ setup_protection_mode:
 
 [bits 32]
 protection_mode_entry:
-    ; jmp $
     ; set data segement
     mov ax, SELECTOR_DATA
-    mov dx, ax
+    mov ds, ax
     mov es, ax
     mov ss, ax
 
@@ -129,26 +67,18 @@ protection_mode_entry:
     mov ax, SELECTOR_VIDEO
     mov gs, ax
 
-    ; call print_P
     call setup_page
 
     jmp $
 
-print_P:
-    mov byte [gs: 160], 'P'
-    ret
-
 ; 初始化页表
 setup_page:
-    ; jmp $
 
     ; 把页表空间先清零
     mov ecx, 4096
     mov esi, 0
 .clear_page_dir:
-    ; jmp $
     mov byte [PAGE_DIR_TABLE_POS + esi], 0  ; FIXME: bug here
-    jmp $
     inc esi
     loop .clear_page_dir
 
