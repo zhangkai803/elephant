@@ -1,10 +1,10 @@
 ; loader
 %include "boot.inc"
-section loader vstart=LOADER_BASE_ADDR
+SECTION LOADER vstart=LOADER_BASE_ADDR
 LOADER_STACK_TOP equ LOADER_BASE_ADDR
 
 entry:
-    jmp loader_start
+    jmp loader_start  ; 代码入口
 
 ; gdt index 0
 GDT_BASE:
@@ -32,9 +32,56 @@ gdt_ptr:
     dw GDT_LIMIT
     dd GDT_BASE
 
+total_mem_bytes dd 0
+
+ards_buf times 244 db 0
+
+ards_nr dw 0
+
 loader_start:
+    call get_mem
+    ; jmp $
+
     call print_by_graph
+    ; jmp $
+
     jmp setup_protection_mode
+
+get_mem:
+    xor ebx, ebx
+    mov edx, 0x534d4150
+    mov di, ards_buf
+.e820_mem_get_loop:
+    mov eax, 0x0000e820
+    mov ecx, 20
+    int 0x15
+    jc .error_hlt
+    add di, cx
+    inc word [ards_nr]
+    cmp ebx, 0
+    jnz .e820_mem_get_loop
+
+    mov cx, [ards_nr]
+    mov ebx, ards_buf
+    xor edx, edx
+.find_mem_area:
+    mov eax, [ebx]
+    add eax, [ebx+8]
+    add ebx, 20
+    cmp edx, eax
+    jge .next_ards
+    mov edx, eax
+.next_ards:
+    loop .find_mem_area
+    jmp .mem_get_ok
+
+.mem_get_ok:
+    mov [total_mem_bytes], edx
+    ret
+
+.error_hlt:
+    hlt
+    jmp $
 
 print_by_graph:
     mov byte [gs:0x00], '2'
@@ -64,11 +111,13 @@ setup_protection_mode:
     mov eax, cr0
     or eax, 0x00000001
     mov cr0, eax
+    ; jmp $
 
     jmp dword SELECTOR_CODE:protection_mode_entry
 
 [bits 32]
 protection_mode_entry:
+    ; jmp $
     ; set data segement
     mov ax, SELECTOR_DATA
     mov dx, ax
@@ -80,7 +129,7 @@ protection_mode_entry:
     mov ax, SELECTOR_VIDEO
     mov gs, ax
 
-    call print_P
+    ; call print_P
     call setup_page
 
     jmp $
@@ -91,12 +140,15 @@ print_P:
 
 ; 初始化页表
 setup_page:
+    ; jmp $
 
     ; 把页表空间先清零
     mov ecx, 4096
     mov esi, 0
 .clear_page_dir:
+    ; jmp $
     mov byte [PAGE_DIR_TABLE_POS + esi], 0  ; FIXME: bug here
+    jmp $
     inc esi
     loop .clear_page_dir
 

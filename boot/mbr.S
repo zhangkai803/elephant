@@ -1,6 +1,6 @@
 ; main boot record
 %include "boot.inc"
-SECTION MBR vstart=0x7c00
+SECTION MBR vstart=MBR_BASE_ADDR
 
 entry:
     call init_registers
