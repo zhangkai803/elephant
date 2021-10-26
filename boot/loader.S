@@ -50,7 +50,6 @@ setup_protection_mode:
     mov eax, cr0
     or eax, 0x00000001
     mov cr0, eax
-    ; jmp $
 
     jmp dword SELECTOR_CODE:protection_mode_entry
 
@@ -71,6 +70,8 @@ protection_mode_entry:
     mov gs, ax
 
     call setup_page
+
+    call enable_page
 
     jmp $
 
@@ -124,4 +125,29 @@ setup_page:
     add edx, PAGE_SIZE  ; 指向下一个 4KB 地址
     inc esi
     loop .create_pte
+    ret
+
+enable_page:
+    sgdt [gdt_ptr]
+
+    ; move the video segment to > 0xC0000000
+    mov ebx, [gdt_ptr + 2]
+    or dword [ebx + 0x18 + 4], 0xC0000000
+
+    ; move gdt to > 0xC0000000
+    add dword [gdt_ptr + 2], 0xC0000000
+
+    ; move stack to > 0xC0000000
+    mov eax, [esp]
+    add esp, 0xc0000000
+    mov [esp], eax
+
+    ; set page directory address to cr3 register
+    mov eax, PAGE_DIR_TABLE_POS
+    mov cr3, eax
+
+    ; enable paging on cr0 register
+    mov eax, cr0
+    or eax, 0x80000000
+    mov cr0, eax
     ret
