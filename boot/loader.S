@@ -69,9 +69,19 @@ protection_mode_entry:
     mov ax, SELECTOR_VIDEO
     mov gs, ax
 
+    ; 读取 kernel
+    mov eax, KERNEL_START_SECTOR  ; rd_disk_m_32 参数 起始扇区
+    mov ebx, KERNEL_BASE_ADDR  ; rd_disk_m_32 参数 目标地址
+    mov ecx, KERNEL_SECTOR_LENGTH  ; rd_disk_m_32 参数 扇区数量
+    call rd_disk_m_32
+
     call setup_page
 
     call enable_page
+
+    lgdt [gdt_ptr]
+
+    jmp SELECTOR_CODE:enter_kernel
 
     jmp $
 
@@ -150,4 +160,110 @@ enable_page:
     mov eax, cr0
     or eax, 0x80000000
     mov cr0, eax
+    ret
+
+rd_disk_m_32:
+    mov esi, eax    ; eax: LBA 扇区号，备份到 esi
+    mov di, cx  ; cx: 读入的扇区数目，备份到 di
+
+    mov dx, 0x1f2   ; 写入读取的扇区数
+    mov al, cl
+    out dx, al
+
+    mov eax, esi    ; 从 esi 恢复 eax
+
+    mov dx, 0x1f3   ; 写入 LBA 地址7-0位
+    out dx, al
+
+    mov cl, 8   ; 写入 LBA 地址15-8位
+    shr eax, cl
+    mov dx, 0x1f4
+    out dx, al
+
+    shr eax, cl   ; 写入 LBA 地址23-16位
+    mov dx, 0x1f5
+    out dx, al
+
+    shr eax, cl
+    and al, 0x0f   ; 写入 LBA 地址27-24位
+    or al, 0xe0   ; 设置 LBA 7-4位为1110，表示硬盘为 LBA 模式
+    mov dx, 0x1f6
+    out dx, al
+
+    mov dx, 0x1f7   ; 写入命令：读取
+    mov al, 0x20
+    out dx, al
+
+  .not_ready:
+    nop
+    in al, dx
+    and al, 0x88    ; 10001000b
+    cmp al, 0x08    ; 00001000b 第4位为1表示可读，第7位为1表示忙碌
+    jnz .not_ready  ; 如果
+
+    mov ax, di  ; 要读取的扇区数
+    mov dx, 256 ; 每个扇区512Byte 每次2Byte 需要256次
+    mul dx  ; 相乘
+    mov cx, ax  ; 要读取的总次数，存入 cx
+
+    mov dx, 0x1f0
+
+  .go_on_read:
+    in ax, dx
+    mov [ebx], ax
+    add ebx, 2
+    loop .go_on_read
+    ret
+
+enter_kernel:
+    call kernel_init
+    mov esp, 0xc009f00
+    jmp KERNEL_ENTRY_POINT
+
+kernel_init:
+    xor eax, eax
+    xor ebx, ebx
+    xor ecx, ecx
+    xor edx, edx
+
+    mov dx, [KERNEL_BASE_ADDR + 42]  ; e_phentsize 属性位置
+    mov ebx, [KERNEL_BASE_ADDR + 28] ; e_phoff 属性位置
+
+    add ebx, KERNEL_BASE_ADDR
+    mov cx, [KERNEL_BASE_ADDR + 44]  ; e_phnum 属性位置
+
+.each_segement:
+    cmp byte [ebx + 0], PT_NULL
+    je .PTNULL
+
+    push dword [ebx + 16]
+    mov eax, [ebx + 4]
+    add eax, KERNEL_BASE_ADDR
+    push eax
+    push dword [ebx + 8]
+    call mem_cpy
+
+    add esp, 12
+
+.PTNULL:
+    add ebx, edx
+    loop .each_segement
+    ret
+
+;--------------------- 逐字节拷贝 mem_cpy(dst, src, size) ------------------------
+; 输入：栈中 3 个参数 dst src size
+; 输出： 无
+;-------------------------------------------------------------------------------
+mem_cpy:
+    cld  ; 方向标志位清零 cflags:DF 位
+    push ebp
+    mov ebp, esp
+    push ecx
+    mov edi, [ebp + 8]
+    mov esi, [ebp + 12]
+    mov ecx, [ebp + 16]
+    rep movsb
+    ; recover
+    pop ecx
+    pop ebp
     ret

@@ -1,4 +1,4 @@
-int main()
+int _start()
 {
     while (1)
     {

@@ -1,9 +1,12 @@
 ; ---------- loader and kernel ----------
 MBR_BASE_ADDR    equ 0x7c00
 LOADER_BASE_ADDR equ 0x8000
+KERNEL_BASE_ADDR equ 0xc0001500
 
 LOADER_START_SECTOR  equ 0x1  ; 此值需要与 loader 在磁盘的扇区位置对应，即 dd 的 seek 参数
 LOADER_SECTOR_LENGTH equ 0x8  ; 此值需要与 loader 占磁盘的扇区数量对应，即 dd 的 count 参数
+KERNEL_START_SECTOR  equ 0x9  ; 此值需要与 kernel 在磁盘的扇区位置对应，即 dd 的 seek 参数
+KERNEL_SECTOR_LENGTH equ 200  ; 此值需要与 kernel 占磁盘的扇区数量对应，即 dd 的 count 参数
 
 ; ---------------- gdt ------------------
 DESC_G_4K equ 1 << 23  ; gdt 第23位 表示粒度为 4KB
@@ -101,3 +104,6 @@ PG_US_U equ 1 << 2
 
 PAGE_SIZE          equ 0x1000  ; 页大小 4KB
 PAGE_DIR_TABLE_POS equ 0x100000  ; 页目录表物理地址
+
+; ------------ elf ---------------
+PT_NULL equ 0
