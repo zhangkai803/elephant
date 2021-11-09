@@ -77,13 +77,7 @@ protection_mode_entry:
 
     call setup_page
 
-    call enable_page
-
-    lgdt [gdt_ptr]
-
     jmp SELECTOR_CODE:enter_kernel
-
-    jmp $
 
 ; 初始化页表
 setup_page:
@@ -135,6 +129,7 @@ setup_page:
     add edx, PAGE_SIZE  ; 指向下一个 4KB 地址
     inc esi
     loop .create_pte
+    call enable_page
     ret
 
 enable_page:
@@ -160,6 +155,14 @@ enable_page:
     mov eax, cr0
     or eax, 0x80000000
     mov cr0, eax
+
+    ; load gdt again - gdt has been moved to > 0xC0000000
+    ; lgdt [gdt_ptr]
+
+    ; refresh video segment selector cache
+    mov ax, SELECTOR_VIDEO
+    mov gs, ax
+
     ret
 
 rd_disk_m_32:
@@ -217,8 +220,20 @@ rd_disk_m_32:
 
 enter_kernel:
     call kernel_init
-    mov esp, 0xc009f00
-    jmp KERNEL_ENTRY_POINT
+
+    ; init floating point unit before entering the kernel
+    finit
+
+    ; move stack to 0xF0000000
+    mov esp, KERNEL_STACK_TOP - 16
+    mov ebp, esp
+
+    ; let's jump to kernel entry :)
+    jmp eax
+    ret
+
+    ; mov esp, 0xc009f00
+    ; jmp KERNEL_ENTRY_POINT
 
 kernel_init:
     xor eax, eax
