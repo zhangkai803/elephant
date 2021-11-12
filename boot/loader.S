@@ -82,7 +82,7 @@ protection_mode_entry:
 ; 初始化页表
 setup_page:
 
-    ; 把页表空间先清零
+    ; 把页目录表空间先清零
     mov ecx, 4096
     mov esi, 0
 .clear_page_dir:
@@ -96,36 +96,37 @@ setup_page:
 ; 所以低 12 位被用来记录属性
 ; 开始创建页目录表
 .create_pde:
-    mov eax, PAGE_DIR_TABLE_POS  ; 0x000100000
-    add eax, PAGE_SIZE  ; 0x1000 是页目录表自身大小 4KB，eax 现在是第0个页表项的地址
+    mov eax, PAGE_TABLE_ADDR  ; 页表位置，实际内存 1MB 处
+    ; add eax, PAGE_SIZE  ; 0x1000 是页目录表自身大小 4KB，eax 现在是第0个页表项的地址
     mov ebx, eax  ; 备份一下第0个页表的地址
-    or eax, PG_US_U | PG_RW_W | PG_P  ; 补充第0个页表的属性，得到完整的第0个页目录项
-    mov [PAGE_DIR_TABLE_POS + 0 * 4], eax  ; 将第0个页目录项写入到页目录表对应的位置
+    or eax, PG_US_U | PG_RW_W | PG_P  ; 补充第0个页表的属性
+    mov [PAGE_DIR_TABLE_POS + 0 * 4], eax  ; 写入第0个页目录项（页目录表地址 + 偏移 0）
 
-    mov [PAGE_DIR_TABLE_POS + 768 * 4], eax  ; 将第768个页目录项，也指向第0个页表
+    ; 将第768个页目录项，也指向第0个页表
+    mov dword [PAGE_DIR_TABLE_POS + 768 * 4], eax
 
     ; 创建第769-1022个页目录项
     mov edx, eax
     or edx, PG_US_U | PG_RW_W | PG_P
-    mov ecx, 254
-    mov esi, 769
+    mov ecx, 254  ; 0xfe
+    mov esi, 769  ; 0x301
 .create_kernel_pde:
     mov [PAGE_DIR_TABLE_POS + esi * 4], edx
     add edx, PAGE_SIZE
     inc esi
     loop .create_kernel_pde
 
-    ; 最后一个页目录项，指向页目录表自己
+    ; 最后一个（第1023）页目录项，指向页目录表自己
     mov eax, PAGE_DIR_TABLE_POS
     mov [PAGE_DIR_TABLE_POS + 1023 * 4], eax
 
     ; 补充第0个页表的内容
     mov edx, 0x0  ; 初始化地址为 0x0
     or edx, PG_US_U | PG_RW_W | PG_P
-    mov ecx, 256  ; 这里只写 256 次，每次 4Byte，映射低 1MB 内存
+    mov ecx, 256  ; 1024次，每次 4Byte，映射最开始的 4MB 内存
     mov esi, 0
 .create_pte:
-    mov [ebx + esi * 4], edx
+    mov [ebx + esi * 4], edx  ; ebx 页表起始地址 0x400000
     add edx, PAGE_SIZE  ; 指向下一个 4KB 地址
     inc esi
     loop .create_pte
@@ -154,10 +155,10 @@ enable_page:
     ; enable paging on cr0 register
     mov eax, cr0
     or eax, 0x80000000
-    mov cr0, eax
+    mov cr0, eax  ; bug: (0).[17652418] ??? (physical address not available)
 
     ; load gdt again - gdt has been moved to > 0xC0000000
-    ; lgdt [gdt_ptr]
+    lgdt [gdt_ptr]
 
     ; refresh video segment selector cache
     mov ax, SELECTOR_VIDEO
@@ -241,6 +242,14 @@ kernel_init:
     xor ecx, ecx
     xor edx, edx
 
+    jmp $
+
+    ; [bug here]
+    ; 00017649356e[CPU0  ] interrupt(): gate descriptor is not valid sys seg (vector=0x0e)
+    ; 00017649356e[CPU0  ] interrupt(): gate descriptor is not valid sys seg (vector=0x08)
+    ; ...
+    ; (0).[17649356] [0x000000008390] 0008:0000000000008390 (unk. ctxt): mov dx, word ptr ds:0x0020002a ; 668b152a002000
+    ; 00017649356e[CPU0  ] exception(): 3rd (13) exception with no resolution, shutdown status is 00h, resetting
     mov dx, [KERNEL_BASE_ADDR + 42]  ; e_phentsize 属性位置
     mov ebx, [KERNEL_BASE_ADDR + 28] ; e_phoff 属性位置
 
