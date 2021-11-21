@@ -25,10 +25,10 @@ DESC_VIDEO:
     dd DESC_VIDEO_LOW32
     dd DESC_VIDEO_HIGH32
 
+times 60 dq 0
+
 GDT_SIZE equ $ - GDT_BASE
 GDT_LIMIT equ GDT_SIZE - 1
-
-times 60 dq 0
 
 ; 0x8203
 gdt_ptr:
@@ -230,6 +230,7 @@ rd_disk_m_32:
     loop .go_on_read
     ret
 
+; 0x8379
 enter_kernel:
     call kernel_init
 
@@ -247,6 +248,7 @@ enter_kernel:
     ; mov esp, 0xc009f00
     ; jmp KERNEL_ENTRY_POINT
 
+; 0x838b
 kernel_init:
     xor eax, eax
     xor ebx, ebx
@@ -294,8 +296,11 @@ mem_cpy:
     push ecx
     mov edi, [ebp + 8]
     mov esi, [ebp + 12]
+    ; 0x83d9
     mov ecx, [ebp + 16]
-    rep movsb  ; bug here
+    ; bug here
+    ; (0) [0x0000000083dc] 0008:00000000000083dc (unk. ctxt): rep movsb byte ptr es:[edi], byte ptr ds:[esi] ; f3a4
+    rep movsb
     ; recover
     pop ecx
     pop ebp
