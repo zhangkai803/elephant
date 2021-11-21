@@ -3,9 +3,11 @@
 SECTION LOADER vstart=LOADER_BASE_ADDR
 LOADER_STACK_TOP equ LOADER_BASE_ADDR
 
+; 0x8000
 entry:
     jmp loader_start  ; 代码入口
 
+; 0x8003
 ; gdt index 0
 GDT_BASE:
     dd 0x00000000
@@ -23,11 +25,12 @@ DESC_VIDEO:
     dd DESC_VIDEO_LOW32
     dd DESC_VIDEO_HIGH32
 
-times 60 dq 0
-
 GDT_SIZE equ $ - GDT_BASE
 GDT_LIMIT equ GDT_SIZE - 1
 
+times 60 dq 0
+
+; 0x8203
 gdt_ptr:
     dw GDT_LIMIT
     dd GDT_BASE
@@ -39,6 +42,7 @@ gdt_ptr:
 loader_start:
     jmp setup_protection_mode
 
+; 进入保护模式
 setup_protection_mode:
     ; A20
     in al, 0x92
@@ -53,6 +57,7 @@ setup_protection_mode:
 
     jmp dword SELECTOR_CODE:protection_mode_entry
 
+; 保护模式代码入口
 [bits 32]
 protection_mode_entry:
     ; 当一个程序要执行时，就要决定程序代码、数据和堆栈各要用到内存的哪些位置
@@ -75,7 +80,11 @@ protection_mode_entry:
     mov ecx, KERNEL_SECTOR_LENGTH  ; rd_disk_m_32 参数 扇区数量
     call rd_disk_m_32
 
+    ; 准备页表
     call setup_page
+
+    ; 开启分页
+    call enable_page
 
     jmp SELECTOR_CODE:enter_kernel
 
@@ -96,56 +105,58 @@ setup_page:
 ; 所以低 12 位被用来记录属性
 ; 开始创建页目录表
 .create_pde:
-    mov eax, PAGE_TABLE_ADDR  ; 页表位置，实际内存 1MB 处
-    ; add eax, PAGE_SIZE  ; 0x1000 是页目录表自身大小 4KB，eax 现在是第0个页表项的地址
+    mov eax, PAGE_DIR_TABLE_POS  ; 页表位置，实际内存 1MB 处
+    add eax, PAGE_SIZE  ; 0x1000 是页目录表自身大小 4KB，eax 现在是第0个页表项的地址
     mov ebx, eax  ; 备份一下第0个页表的地址
     or eax, PG_US_U | PG_RW_W | PG_P  ; 补充第0个页表的属性
     mov [PAGE_DIR_TABLE_POS + 0 * 4], eax  ; 写入第0个页目录项（页目录表地址 + 偏移 0）
 
     ; 将第768个页目录项，也指向第0个页表
     mov dword [PAGE_DIR_TABLE_POS + 768 * 4], eax
-
-    ; 创建第769-1022个页目录项
-    mov edx, eax
-    or edx, PG_US_U | PG_RW_W | PG_P
-    mov ecx, 254  ; 0xfe
-    mov esi, 769  ; 0x301
-.create_kernel_pde:
-    mov [PAGE_DIR_TABLE_POS + esi * 4], edx
-    add edx, PAGE_SIZE
-    inc esi
-    loop .create_kernel_pde
-
-    ; 最后一个（第1023）页目录项，指向页目录表自己
-    mov eax, PAGE_DIR_TABLE_POS
-    mov [PAGE_DIR_TABLE_POS + 1023 * 4], eax
+    ; 最后一个页目录项，指向页目录表自己
+    sub eax, PAGE_SIZE
+    mov dword [PAGE_DIR_TABLE_POS + 4092 * 4], eax
 
     ; 补充第0个页表的内容
-    mov edx, 0x0  ; 初始化地址为 0x0
-    or edx, PG_US_U | PG_RW_W | PG_P
-    mov ecx, 256  ; 1024次，每次 4Byte，映射最开始的 4MB 内存
+    mov ecx, 256  ; 256 次，每次 4Byte，映射最开始的 1 MB 低端内存
     mov esi, 0
+    mov edx, PG_US_U | PG_RW_W | PG_P
 .create_pte:
     mov [ebx + esi * 4], edx  ; ebx 页表起始地址 0x400000
     add edx, PAGE_SIZE  ; 指向下一个 4KB 地址
     inc esi
     loop .create_pte
-    call enable_page
+
+    ; 创建第769-1022个页目录项
+    mov eax, PAGE_DIR_TABLE_POS
+    add eax, 0x2000
+    or edx, PG_US_U | PG_RW_W | PG_P
+    mov ecx, 254  ; 0xfe
+    mov esi, 769  ; 0x301
+.create_kernel_pde:
+    mov [PAGE_DIR_TABLE_POS + esi * 4], eax
+    inc esi
+    add eax, PAGE_SIZE
+    loop .create_kernel_pde
     ret
 
 enable_page:
     sgdt [gdt_ptr]
 
-    ; move the video segment to > 0xC0000000
+    ; gdt_ptr + 2 指向 GDT_BASE
+    ; GDT_BASE + 0x18 指向 GDT[3]
+    ; +4 指向段描述符段基址的 31-24 位
     mov ebx, [gdt_ptr + 2]
     or dword [ebx + 0x18 + 4], 0xC0000000
 
-    ; move gdt to > 0xC0000000
+    ; GDT_BASE 的值 也加上 0xC0000000
     add dword [gdt_ptr + 2], 0xC0000000
 
-    ; move stack to > 0xC0000000
+    ; 保存原 esp 内的值
     mov eax, [esp]
-    add esp, 0xc0000000
+    ; esp 移动到高地址
+    add esp, 0xC0000000
+    ; 将原 esp 的值 写入新 esp
     mov [esp], eax
 
     ; set page directory address to cr3 register
@@ -161,8 +172,8 @@ enable_page:
     lgdt [gdt_ptr]
 
     ; refresh video segment selector cache
-    mov ax, SELECTOR_VIDEO
-    mov gs, ax
+    ; mov ax, SELECTOR_VIDEO
+    ; mov gs, ax
 
     ret
 
@@ -242,8 +253,6 @@ kernel_init:
     xor ecx, ecx
     xor edx, edx
 
-    jmp $
-
     ; [bug here]
     ; 00017649356e[CPU0  ] interrupt(): gate descriptor is not valid sys seg (vector=0x0e)
     ; 00017649356e[CPU0  ] interrupt(): gate descriptor is not valid sys seg (vector=0x08)
@@ -286,7 +295,7 @@ mem_cpy:
     mov edi, [ebp + 8]
     mov esi, [ebp + 12]
     mov ecx, [ebp + 16]
-    rep movsb
+    rep movsb  ; bug here
     ; recover
     pop ecx
     pop ebp
