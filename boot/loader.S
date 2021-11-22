@@ -115,7 +115,7 @@ setup_page:
     mov dword [PAGE_DIR_TABLE_POS + 768 * 4], eax
     ; 最后一个页目录项，指向页目录表自己
     sub eax, PAGE_SIZE
-    mov dword [PAGE_DIR_TABLE_POS + 4092 * 4], eax
+    mov dword [PAGE_DIR_TABLE_POS + 1023 * 4], eax
 
     ; 补充第0个页表的内容
     mov ecx, 256  ; 256 次，每次 4Byte，映射最开始的 1 MB 低端内存
@@ -130,7 +130,7 @@ setup_page:
     ; 创建第769-1022个页目录项
     mov eax, PAGE_DIR_TABLE_POS
     add eax, 0x2000
-    or edx, PG_US_U | PG_RW_W | PG_P
+    or eax, PG_US_U | PG_RW_W | PG_P
     mov ecx, 254  ; 0xfe
     mov esi, 769  ; 0x301
 .create_kernel_pde:
@@ -148,16 +148,20 @@ enable_page:
     ; +4 指向段描述符段基址的 31-24 位
     mov ebx, [gdt_ptr + 2]
     or dword [ebx + 0x18 + 4], 0xC0000000
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; or dword [ebx + 0x08 + 4], 0xC0000000
+    ; or dword [ebx + 0x10 + 4], 0xC0000000
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     ; GDT_BASE 的值 也加上 0xC0000000
     add dword [gdt_ptr + 2], 0xC0000000
 
     ; 保存原 esp 内的值
-    mov eax, [esp]
+    ; mov eax, [esp]
     ; esp 移动到高地址
     add esp, 0xC0000000
     ; 将原 esp 的值 写入新 esp
-    mov [esp], eax
+    ; mov [esp], eax
 
     ; set page directory address to cr3 register
     mov eax, PAGE_DIR_TABLE_POS
@@ -278,7 +282,7 @@ kernel_init:
     push dword [ebx + 8]
     call mem_cpy
 
-    add esp, 12
+    add esp, 12  ; 清理栈中压入的三个参数
 
 .PTNULL:
     add ebx, edx
@@ -299,7 +303,35 @@ mem_cpy:
     ; 0x83d9
     mov ecx, [ebp + 16]
     ; bug here
+    ; 00017649374e[CPU0  ] interrupt(): gate descriptor is not valid sys seg (vector=0x0e)
+    ; 00017649374e[CPU0  ] interrupt(): gate descriptor is not valid sys seg (vector=0x08)
+    ; 00017649374i[CPU0  ] CPU is in protected mode (active)
+    ; 00017649374i[CPU0  ] CS.mode = 32 bit
+    ; 00017649374i[CPU0  ] SS.mode = 32 bit
+    ; 00017649374i[CPU0  ] EFER   = 0x00000000
+    ; 00017649374i[CPU0  ] | EAX=00071000  EBX=00070034  ECX=0000003c  EDX=00000020
+    ; 00017649374i[CPU0  ] | ESP=c0007fe4  EBP=c0007fe8  ESI=00071000  EDI=c0800000
+    ; 00017649374i[CPU0  ] | IOPL=0 id vip vif ac vm RF nt of df if tf sf zf af PF cf
+    ; 00017649374i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
+    ; 00017649374i[CPU0  ] |  CS:0008( 0001| 0|  0) 00000000 ffffffff 1 1
+    ; 00017649374i[CPU0  ] |  DS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+    ; 00017649374i[CPU0  ] |  SS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+    ; 00017649374i[CPU0  ] |  ES:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+    ; 00017649374i[CPU0  ] |  FS:0000( 0005| 0|  0) 00000000 0000ffff 0 0
+    ; 00017649374i[CPU0  ] |  GS:0018( 0003| 0|  0) 000b8000 00007fff 1 1
+    ; 00017649374i[CPU0  ] | EIP=000083dc (000083dc)
+    ; 00017649374i[CPU0  ] | CR0=0xe0000011 CR2=0xc0800000
+    ; 00017649374i[CPU0  ] | CR3=0x00100000 CR4=0x00000000
     ; (0) [0x0000000083dc] 0008:00000000000083dc (unk. ctxt): rep movsb byte ptr es:[edi], byte ptr ds:[esi] ; f3a4
+    ; 00017649374e[CPU0  ] exception(): 3rd (13) exception with no resolution, shutdown status is 00h, resetting
+    ; https://wiki.osdev.org/Exceptions
+    ; https://wiki.osdev.org/Exceptions#Double_Fault
+    ; https://wiki.osdev.org/Exceptions#Page_Fault
+    ; A Page Fault occurs when:
+    ; - A page directory or table entry is not present in physical memory.
+    ; - Attempting to load the instruction TLB with a translation for a non-executable page.
+    ; - A protection check (privileges, read/write) failed.
+    ; - A reserved bit in the page directory or table entries is set to 1.
     rep movsb
     ; recover
     pop ecx
