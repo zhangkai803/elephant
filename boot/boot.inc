@@ -108,7 +108,7 @@ KERNEL_START_SECTOR  equ 0x9  ; 此值需要与 kernel 在磁盘的扇区位置�
 KERNEL_SECTOR_LENGTH equ 200  ; 此值需要与 kernel 占磁盘的扇区数量对应，即 dd 的 count 参数
 
 ; KERNEL_BASE_ADDR   equ 0x200000    ; 内核物理地址 2MB 处
-KERNEL_BASE_ADDR   equ 0x70000    ; 内核物理地址 56 KB 处
+KERNEL_BASE_ADDR   equ 0x70000    ; 内核物理地址 448 KB 处
 KERNEL_ENTRY_POINT equ 0xc0800000  ; 内核入口地址 虚拟地址
 KERNEL_STACK_TOP   equ 0xF0000000
 

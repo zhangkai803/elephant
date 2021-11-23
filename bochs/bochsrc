@@ -12,8 +12,8 @@ vgaromimage: file=/usr/local/share/bochs/VGABIOS-lgpl-latest
 boot: disk
 
 # bochs 运行日志
-# log: bochsout.txt
-log: /dev/tty
+log: bochsout.txt
+# log: /dev/tty
 
 # 其他功能开关
 mouse: enabled=0

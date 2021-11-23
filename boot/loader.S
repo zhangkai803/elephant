@@ -332,7 +332,7 @@ mem_cpy:
     ; - Attempting to load the instruction TLB with a translation for a non-executable page.
     ; - A protection check (privileges, read/write) failed.
     ; - A reserved bit in the page directory or table entries is set to 1.
-    rep movsb
+    rep movsb  ; means: repeat move byte from ... to ...
     ; recover
     pop ecx
     pop ebp
