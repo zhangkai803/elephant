@@ -302,6 +302,7 @@ mem_cpy:
     mov esi, [ebp + 12]
     ; 0x83d9
     mov ecx, [ebp + 16]
+    ; jmp $
     ; bug here
     ; 00017649374e[CPU0  ] interrupt(): gate descriptor is not valid sys seg (vector=0x0e)
     ; 00017649374e[CPU0  ] interrupt(): gate descriptor is not valid sys seg (vector=0x08)
