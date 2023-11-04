@@ -1,6 +1,6 @@
 ; ---------- loader and kernel ----------
-MBR_BASE_ADDR    equ 0x7c00
-LOADER_BASE_ADDR equ 0x8000
+MBR_BASE_ADDR      equ 0x7c00
+LOADER_BASE_ADDR   equ 0x900
 
 LOADER_START_SECTOR  equ 0x1  ; 此值需要与 loader 在磁盘的扇区位置对应，即 dd 的 seek 参数
 LOADER_SECTOR_LENGTH equ 0x8  ; 此值需要与 loader 占磁盘的扇区数量对应，即 dd 的 count 参数
@@ -99,5 +99,17 @@ PG_RW_W equ 1 << 1
 PG_US_S equ 0 << 2
 PG_US_U equ 1 << 2
 
-PAGE_SIZE          equ 0x1000  ; 页大小 4KB
-PAGE_DIR_TABLE_POS equ 0x100000  ; 页目录表物理地址
+PAGE_SIZE          equ 0x1000                       ; 页大小 4KB
+PAGE_DIR_TABLE_POS    equ 0x100000                     ; 页目录表物理地址 1MB
+; PAGE_DIR_TABLE_POS equ PAGE_TABLE_ADDR + PAGE_SIZE  ; 页目录表物理地址 1MB + 4KB
+
+; ------------ kernel ---------------
+KERNEL_START_SECTOR  equ 0x9  ; 此值需要与 kernel 在磁盘的扇区位置对应，即 dd 的 seek 参数
+KERNEL_SECTOR_LENGTH equ 200  ; 此值需要与 kernel 占磁盘的扇区数量对应，即 dd 的 count 参数
+
+; KERNEL_BASE_ADDR   equ 0x200000    ; 内核物理地址 2MB 处
+KERNEL_BASE_ADDR   equ 0x70000    ; 内核物理地址 448 KB 处
+KERNEL_ENTRY_POINT equ 0xc0800000  ; 内核入口地址 虚拟地址
+KERNEL_STACK_TOP   equ 0xF0000000
+
+PT_NULL equ 0
